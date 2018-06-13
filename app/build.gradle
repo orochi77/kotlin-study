@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -15,11 +17,16 @@ android {
         buildConfigField "String", "GITHUB_CLIENT_SECRET",
                 project.properties["GITHUB_CLIENT_SECRET"] ?: "\"NOT_FOUNT\""
     }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
     }
 }
 
@@ -35,8 +42,8 @@ dependencies {
     implementation "com.squareup.okhttp3:okhttp:$okHttpVersion"
     implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
     implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
-    implementation "com.android.support.constraint:constraint-layout:$constraintLayoutVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVerseion"
 
-    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
     annotationProcessor "com.github.bumptech.glide:compiler:$glideVersion"
+    kapt "com.github.bumptech.glide:compiler:$glideVersion"
 }

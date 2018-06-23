@@ -3,15 +3,11 @@ package com.tangbba.simplegithubforjava.ui.repo
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 
 import com.tangbba.simplegithubforjava.R
 import com.tangbba.simplegithubforjava.api.GithubApi
-import com.tangbba.simplegithubforjava.api.GithubApiProvider
 import com.tangbba.simplegithubforjava.api.model.GithubRepo
+import com.tangbba.simplegithubforjava.api.provideGithubApi
 import com.tangbba.simplegithubforjava.ui.GlideApp
 
 import java.text.ParseException
@@ -22,20 +18,17 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
+import kotlinx.android.synthetic.main.activity_repository.*
+
 class RepositoryActivity : AppCompatActivity() {
 
-    private lateinit var mRepositoryContent: LinearLayout
-    internal lateinit var mProfileImageView: ImageView
-    internal lateinit var mRepositoryNameTextView: TextView
-    internal lateinit var mStarsTextView: TextView
-    internal lateinit var mDescriptionTextView: TextView
-    internal lateinit var mLanguageTextView: TextView
-    internal lateinit var mLastUpdateTextView: TextView
-    private lateinit var mProgressBar: ProgressBar
-    private lateinit var mMessageTextView: TextView
+    companion object {
+        const val KEY_USER_LOGIN = "user_login"
+        const val KEY_REPO_NAME = "repo_name"
+    }
 
-    private lateinit var mGithubApi: GithubApi
-    private lateinit var mGithubRepoCall: Call<GithubRepo>
+    internal val mGithubApi by lazy { provideGithubApi(this) }
+    internal var mGithubRepoCall: Call<GithubRepo>? = null
 
     internal var mDateFormatInResponse = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault())
     internal var mDateFormatForDisplay = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -44,17 +37,6 @@ class RepositoryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_repository)
 
-        mRepositoryContent = findViewById(R.id.repository_content)
-        mProfileImageView = findViewById(R.id.profile_image_view)
-        mRepositoryNameTextView = findViewById(R.id.repository_name_text_view)
-        mStarsTextView = findViewById(R.id.stars_text_view)
-        mDescriptionTextView = findViewById(R.id.description_text_view)
-        mLanguageTextView = findViewById(R.id.language_text_view)
-        mLastUpdateTextView = findViewById(R.id.last_update_text_view)
-        mProgressBar = findViewById(R.id.progress_bar)
-        mMessageTextView = findViewById(R.id.message_text_view)
-
-        mGithubApi = GithubApiProvider.provideGithubApi(this)
 
         val login = intent.getStringExtra(KEY_USER_LOGIN)
                 ?: throw IllegalArgumentException("No login info exist in extras.")
@@ -64,11 +46,16 @@ class RepositoryActivity : AppCompatActivity() {
         showRepositoryInfo(login, repo)
     }
 
+    override fun onStop() {
+        super.onStop()
+        mGithubRepoCall?.run { cancel() }
+    }
+
     private fun showRepositoryInfo(login: String, repoName: String) {
         showProgress()
 
         mGithubRepoCall = mGithubApi.getRepository(login, repoName)
-        mGithubRepoCall.enqueue(object : Callback<GithubRepo> {
+        mGithubRepoCall!!.enqueue(object : Callback<GithubRepo> {
             override fun onResponse(call: Call<GithubRepo>, response: Response<GithubRepo>) {
                 hideProgress(true)
 
@@ -76,26 +63,26 @@ class RepositoryActivity : AppCompatActivity() {
                 if (response.isSuccessful && null != repo) {
                     GlideApp.with(this@RepositoryActivity)
                             .load(repo.owner.avatarUrl)
-                            .into(mProfileImageView)
+                            .into(profile_image_view)
 
-                    mRepositoryNameTextView.text = repo.fullName
-                    mStarsTextView.text = resources.getQuantityString(R.plurals.star, repo.stars, repo.stars)
+                    repository_name_text_view.text = repo.fullName
+                    stars_text_view.text = resources.getQuantityString(R.plurals.star, repo.stars, repo.stars)
                     if (null == repo.description) {
-                        mDescriptionTextView.setText(R.string.no_description_provided)
+                        description_text_view.setText(R.string.no_description_provided)
                     } else {
-                        mDescriptionTextView.text = repo.description
+                        description_text_view.text = repo.description
                     }
                     if (null == repo.language) {
-                        mLanguageTextView.setText(R.string.no_language_specified)
+                        language_text_view.setText(R.string.no_language_specified)
                     } else {
-                        mLanguageTextView.text = repo.language
+                        language_text_view.text = repo.language
                     }
 
                     try {
                         val lastUpdate = mDateFormatInResponse.parse(repo.updatedAt)
-                        mLastUpdateTextView.text = mDateFormatForDisplay.format(lastUpdate)
+                        last_update_text_view.text = mDateFormatForDisplay.format(lastUpdate)
                     } catch (e: ParseException) {
-                        mLastUpdateTextView.text = getString(R.string.unknown)
+                        last_update_text_view.text = getString(R.string.unknown)
                     }
 
                 } else {
@@ -111,22 +98,21 @@ class RepositoryActivity : AppCompatActivity() {
     }
 
     private fun showProgress() {
-        mRepositoryContent.visibility = View.GONE
-        mProgressBar.visibility = View.VISIBLE
+        repository_content.visibility = View.GONE
+        progress_bar.visibility = View.VISIBLE
     }
 
     private fun hideProgress(isSuccess: Boolean) {
-        mRepositoryContent.visibility = if (isSuccess) View.VISIBLE else View.GONE
-        mProgressBar.visibility = View.GONE
+        repository_content.visibility = if (isSuccess) View.VISIBLE else View.GONE
+        progress_bar.visibility = View.GONE
     }
 
     private fun showError(message: String?) {
-        mMessageTextView.text = message
-        mMessageTextView.visibility = View.VISIBLE
+        with(message_text_view) {
+            text = message ?: "Unexpected Error."
+            visibility = View.VISIBLE
+        }
     }
 
-    companion object {
-        val KEY_USER_LOGIN = "user_login"
-        val KEY_REPO_NAME = "repo_name"
-    }
+
 }
